@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #172126;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(31, 95, 84, 0.10), transparent 34rem),
+    linear-gradient(180deg, #f8fafb 0%, #eef3f3 100%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.icon-button {
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  background: #ffffff;
+  color: #334155;
+  transition: 160ms ease;
+}
+
+.icon-button:hover {
+  border-color: #1f5f54;
+  color: #1f5f54;
+}
+
+.text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: #eef7f5;
+  color: #1f5f54;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.icon-button:focus-visible,
+.text-button:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(31, 95, 84, 0.18);
+  outline-offset: 2px;
+}
+
+.resume-page {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.resume-page:hover {
+  box-shadow: 0 22px 60px rgba(23, 33, 38, 0.16);
+}
+
+::selection {
+  background: rgba(31, 95, 84, 0.18);
+}
+
+@media (max-width: 920px) {
+  .resume-page {
+    transform-origin: top left;
+    transform: scale(0.78);
+  }
+}
+
+@media (max-width: 720px) {
+  .resume-page {
+    transform: scale(0.56);
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+}
