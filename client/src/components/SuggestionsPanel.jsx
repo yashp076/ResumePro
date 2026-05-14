@@ -2,8 +2,39 @@ import { RefreshCw, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { fetchSuggestions } from '../lib/api.js';
 
-export function SuggestionsPanel({ resume, section, onInsert }) {
+export function SuggestionsPanel({ resume, section, onInsert, contextOverride, title = 'AI Suggestions' }) {
   const [state, setState] = useState({ loading: false, error: '', data: null });
+
+  function buildContext() {
+    const baseContext = {
+      currentContent: section === 'summary' ? resume.summary : '',
+      yearsOfExperience: resume.yearsOfExperience,
+      industry: resume.industry
+    };
+
+    if (section !== 'summary') {
+      return baseContext;
+    }
+
+    return {
+      ...baseContext,
+      skills: resume.skills.filter(Boolean).slice(0, 12),
+      experience: resume.experience.slice(0, 3).map((item) => ({
+        role: item.role,
+        company: item.company,
+        bullets: (item.bullets || []).filter(Boolean).slice(0, 4)
+      })),
+      projects: resume.projects.slice(0, 3).map((project) => ({
+        name: project.name,
+        description: project.description
+      })),
+      education: resume.education.slice(0, 2).map((item) => ({
+        degree: item.degree,
+        school: item.school
+      })),
+      certifications: resume.certifications.filter(Boolean).slice(0, 5)
+    };
+  }
 
   async function generate() {
     setState({ loading: true, error: '', data: null });
@@ -11,11 +42,7 @@ export function SuggestionsPanel({ resume, section, onInsert }) {
       const data = await fetchSuggestions({
         role: resume.customRole || resume.targetRole,
         section,
-        context: {
-          currentContent: section === 'summary' ? resume.summary : '',
-          yearsOfExperience: resume.yearsOfExperience,
-          industry: resume.industry
-        }
+        context: contextOverride || buildContext()
       });
       setState({ loading: false, error: '', data });
     } catch (error) {
@@ -28,7 +55,7 @@ export function SuggestionsPanel({ resume, section, onInsert }) {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-blue-600" />
-          <h2 className="text-sm font-semibold text-slate-900">AI Suggestions</h2>
+          <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
         </div>
         <button
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"

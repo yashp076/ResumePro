@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, Target } from 'lucide-react';
+import { BriefcaseBusiness } from 'lucide-react';
 
 export function RoleInsights({ resume }) {
   const role = resume.customRole || resume.targetRole;

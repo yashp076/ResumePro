@@ -21,6 +21,16 @@ function fallbackSuggestions({ role, section, context }) {
   const keywords = roleKeywords(role);
   const years = context?.yearsOfExperience || 2;
   const industry = context?.industry || 'the target industry';
+  const skills = context?.skills?.length ? context.skills : keywords;
+  const firstExperience = context?.experience?.find((item) => item.role || item.company || item.bullets?.length);
+  const firstProject = context?.projects?.find((project) => project.name || project.description);
+  const projectDescription = firstProject?.description?.replace(/[.。]\s*$/, '');
+  const experienceSignal = firstExperience
+    ? `${firstExperience.role || 'professional experience'}${firstExperience.company ? ` at ${firstExperience.company}` : ''}`
+    : `${industry} experience`;
+  const projectSignal = firstProject
+    ? `${firstProject.name || 'a relevant project'}${projectDescription ? `, a project focused on ${projectDescription.charAt(0).toLowerCase()}${projectDescription.slice(1)}` : ''}`
+    : 'practical project work';
 
   if (section === 'skills') {
     return {
@@ -34,9 +44,9 @@ function fallbackSuggestions({ role, section, context }) {
   if (section === 'summary') {
     return {
       suggestions: [
-        `${role} with ${years}+ years of experience delivering measurable outcomes across ${industry}, combining ${keywords.slice(0, 3).join(', ')} with clear cross-functional communication.`,
-        `Results-focused ${role} skilled in ${keywords.slice(0, 4).join(', ')}, with a track record of improving team execution and translating ambiguous goals into shipped work.`,
-        `Detail-oriented ${role} bringing hands-on experience in ${keywords.slice(1, 5).join(', ')} and a practical approach to solving business-critical problems.`
+        `${role} with ${years}+ years of experience delivering measurable outcomes across ${industry}, with hands-on strengths in ${skills.slice(0, 5).join(', ')}. Brings direct exposure to ${experienceSignal}, using structured problem-solving and cross-functional collaboration to turn requirements into reliable work. Supported by ${projectSignal}, with a strong focus on performance, maintainability, and user impact while adapting quickly to business priorities.`,
+        `Results-focused ${role} with a strong foundation in ${skills.slice(0, 6).join(', ')} and a track record of contributing to high-quality work in ${industry}. Experienced in applying lessons from ${experienceSignal} to solve technical problems, improve workflows, and support dependable delivery. Combines analytical thinking, ownership, and practical project experience through ${projectSignal} to build solutions aligned with business goals.`,
+        `Detail-oriented ${role} bringing ${years}+ years of experience across ${industry}, with practical expertise in ${skills.slice(0, 5).join(', ')}. Skilled at building, improving, and maintaining systems informed by ${experienceSignal} and demonstrated through ${projectSignal}. Recognized for consistent delivery, clear communication, and the ability to learn quickly while contributing to team productivity and product success.`
       ],
       keywords,
       tip: fallbackTips.summary,
@@ -85,6 +95,35 @@ function providerFailureMessage(provider, error) {
 }
 
 function buildPrompt({ role, section, context }) {
+  const sectionRules = {
+    summary: [
+      'Each suggestion must be a complete professional summary paragraph, not a question.',
+      'Write 3 to 4 substantial sentences per suggestion.',
+      'Each summary must be 65 to 95 words.',
+      'Use evidence from context.experience, context.projects, context.skills, context.education, and context.certifications when available.',
+      'Mention years of experience when available, core technical or role skills, measurable impact, collaboration style, project evidence, and target industry fit.',
+      'Prefer specific project names, experience bullets, and skills from the context over generic wording.',
+      'Do not start with verbs like Developed, Improved, Managed, or Collaborated.',
+      'Do not ask the user for missing information.',
+      'Do not include question marks.'
+    ],
+    experience: [
+      'Each suggestion must be one resume bullet point, not a question.',
+      'When context.experienceItem is provided, write bullets specifically for that role and company.',
+      'Use context.experienceItem.role, context.experienceItem.company, existing bullets, skills, and projects as hints.',
+      'Start every bullet with a strong past-tense action verb.',
+      'Include a metric, scope, or measurable result where possible.',
+      'Do not ask the user for missing information.',
+      'Do not include question marks.'
+    ],
+    skills: [
+      'Each suggestion must be one short skill keyword or keyword phrase.',
+      'Do not write sentences.',
+      'Do not ask questions.',
+      'Do not include question marks.'
+    ]
+  };
+
   return `You are an expert resume writer. Generate JSON only for a ${role} resume.
 Section: ${section}
 Context: ${JSON.stringify(context || {})}
@@ -99,6 +138,9 @@ Rules:
 - Experience bullets must start with action verbs and include measurable impact when possible.
 - Summary suggestions must be professional first-person-free resume summaries.
 - Skills must be short keyword phrases.
+- Never generate questions, interview prompts, instructions, placeholders, or requests for more information.
+- Every suggestion must be ready to insert directly into a resume.
+- Section-specific rules: ${sectionRules[section].join(' ')}
 - Do not include markdown.`;
 }
 
@@ -111,8 +153,24 @@ function parseSuggestions(text, payload, source) {
 
   try {
     const parsed = JSON.parse(cleaned);
+    let suggestions = Array.isArray(parsed.suggestions)
+      ? parsed.suggestions
+        .filter((suggestion) => typeof suggestion === 'string')
+        .map((suggestion) => suggestion.trim())
+        .filter((suggestion) => suggestion && !suggestion.includes('?') && !/\[|\]|insert|placeholder/i.test(suggestion))
+        .slice(0, 8)
+      : [];
+
+    if (payload.section === 'summary') {
+      suggestions = suggestions.filter((suggestion) => suggestion.split(/\s+/).length >= 45);
+    }
+
+    if (!suggestions.length) {
+      return fallbackSuggestions(payload);
+    }
+
     return {
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 8) : [],
+      suggestions,
       keywords: Array.isArray(parsed.keywords) ? parsed.keywords.slice(0, 10) : roleKeywords(payload.role),
       tip: parsed.tip || fallbackTips[payload.section],
       source

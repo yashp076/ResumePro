@@ -119,14 +119,6 @@ export function ResumeForm({ roleCategories, onExportJson }) {
         </Field>
       </section>
 
-      <SuggestionsPanel resume={resume} section="experience" onInsert={(suggestion) => {
-        update('experience', (items) => {
-          const next = [...items];
-          next[0] = { ...next[0], bullets: [...next[0].bullets, suggestion] };
-          return next;
-        });
-      }} />
-
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900">Experience</h2>
@@ -157,6 +149,31 @@ export function ResumeForm({ roleCategories, onExportJson }) {
               <Field label="Bullets">
                 <textarea className={textareaClass} value={joinLines(item.bullets)} onChange={(event) => updateList('experience', index, { ...item, bullets: splitLines(event.target.value) })} />
               </Field>
+              <div className="mt-3">
+                <SuggestionsPanel
+                  resume={resume}
+                  section="experience"
+                  title="Suggest bullets"
+                  contextOverride={{
+                    yearsOfExperience: resume.yearsOfExperience,
+                    industry: resume.industry,
+                    skills: resume.skills.filter(Boolean).slice(0, 12),
+                    experienceItem: {
+                      role: item.role,
+                      company: item.company,
+                      bullets: (item.bullets || []).filter(Boolean)
+                    },
+                    projects: resume.projects.slice(0, 2).map((project) => ({
+                      name: project.name,
+                      description: project.description
+                    }))
+                  }}
+                  onInsert={(suggestion) => updateList('experience', index, {
+                    ...item,
+                    bullets: [...(item.bullets || []).filter(Boolean), suggestion]
+                  })}
+                />
+              </div>
             </div>
           ))}
         </div>
