@@ -111,6 +111,9 @@ function buildPrompt({ role, section, context }) {
       'Each suggestion must be one resume bullet point, not a question.',
       'When context.experienceItem is provided, write bullets specifically for that role and company.',
       'Use context.experienceItem.role, context.experienceItem.company, existing bullets, skills, and projects as hints.',
+      'Generate bullets from different angles: technical implementation, measurable business impact, collaboration, performance optimization, ownership, problem-solving, project delivery, and quality improvement.',
+      'Avoid repeating the same action verb or sentence pattern across suggestions.',
+      'Do not produce generic bullets that could fit any job.',
       'Start every bullet with a strong past-tense action verb.',
       'Include a metric, scope, or measurable result where possible.',
       'Do not ask the user for missing information.',
@@ -165,6 +168,22 @@ function parseSuggestions(text, payload, source) {
       suggestions = suggestions.filter((suggestion) => suggestion.split(/\s+/).length >= 45);
     }
 
+    if (payload.section === 'experience') {
+      const seenStarts = new Set();
+      const seenBodies = new Set();
+      suggestions = suggestions.filter((suggestion) => {
+        const words = suggestion.toLowerCase().split(/\s+/);
+        const start = words.slice(0, 2).join(' ');
+        const body = words.filter((word) => word.length > 4).slice(0, 7).join(' ');
+        if (seenStarts.has(start) || seenBodies.has(body)) {
+          return false;
+        }
+        seenStarts.add(start);
+        seenBodies.add(body);
+        return true;
+      });
+    }
+
     if (!suggestions.length) {
       return fallbackSuggestions(payload);
     }
@@ -194,7 +213,9 @@ async function generateWithGroq(payload) {
       },
       body: JSON.stringify({
         model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
-        temperature: 0.35,
+        temperature: payload.section === 'experience' ? 0.75 : 0.4,
+        presence_penalty: payload.section === 'experience' ? 0.45 : 0,
+        frequency_penalty: payload.section === 'experience' ? 0.35 : 0,
         max_tokens: 700,
         messages: [
           {
